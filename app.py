@@ -30,7 +30,42 @@ st.caption("Estimate predicted delay and affected distance using machine learnin
 # ======================================================
 # CUSTOM CSS STYLES
 # ======================================================
+st.markdown("""
+    <style>
+        /* Reduce spacing below captions and headers */
+        .stMarkdown p, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+            margin-bottom: 0.2rem !important;
+            margin-top: 0.4rem !important;
+        }
+        
+        /* Keep all metrics in a single row */
+        div[data-testid="stHorizontalBlock"] {
+            flex-wrap: nowrap !important;
+            justify-content: space-between !important;
+        }
 
+        /* Adjust metric label and value sizes */
+        [data-testid="stMetricLabel"] {
+            font-size: 0.8rem !important;   /* smaller label */
+        }
+        [data-testid="stMetricValue"] {
+            font-size: 1.3rem !important;   /* slightly larger result text */
+            font-weight: 600 !important;
+        }
+
+        /* Keep consistent column width so 5 fit nicely */
+        div[data-testid="stHorizontalBlock"] > div {
+            margin: 0.2rem !important;
+            flex: 1 1 18% !important;
+        }
+
+        /* Reduce vertical gaps between sections */
+        h2, h3 {
+            margin-top: 0.6rem !important;
+            margin-bottom: 0.3rem !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 if submitted:
     # -----------------------------------------
