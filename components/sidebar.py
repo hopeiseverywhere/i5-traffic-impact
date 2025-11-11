@@ -14,8 +14,8 @@ def prediction_sidebar(mileposts):
     hour = st.sidebar.slider("Hour of Day", 0, 23, DEFAULTS["hour"])
     day_of_week = st.sidebar.slider("Day of Week", 0, 6, DEFAULTS["day_of_week"], help="0=Mon, 6=Sun")
 
-    is_rush_hour = int(7 <= hour <= 10 or 16 <= hour <= 19)
     is_weekend = int(day_of_week >= 5)
+    is_rush_hour = int((not is_weekend) and (7 <= hour <= 10 or 16 <= hour <= 19))
 
     rush_desc = "✅ Rush Hour" if is_rush_hour else "Off-Peak"
     weekend_desc = "Weekend" if is_weekend else "Weekday"

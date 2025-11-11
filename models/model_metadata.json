@@ -16,15 +16,15 @@
     "rush_blocking_interaction"
   ],
   "classification_metrics": {
-    "f1_score": 0.5207363369386148,
-    "roc_auc": 0.9204762825223303
+    "f1_score": 0.5268439538384345,
+    "roc_auc": 0.9222881247908239
   },
   "regression_metrics": {
     "rmse": 5.693053188117146,
     "mae": 3.625784169759081,
     "r2": 0.4634788706799129
   },
-  "training_date": "2025-11-10 14:29:10",
+  "training_date": "2025-11-11 12:46:38",
   "training_samples": 143957,
   "test_samples": 35990
 }

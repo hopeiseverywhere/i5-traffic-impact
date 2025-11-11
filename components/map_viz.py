@@ -1,7 +1,11 @@
 import streamlit as st
 import pydeck as pdk
 from util.map_layers import make_path_layer
-from util.geo_utils import get_coordinates_from_normalized, get_approx_milepost_number
+from util.geo_utils import (
+    get_coordinates_from_normalized,
+    get_approx_milepost_number,
+    find_nearest_milepost_coord,
+)
 from util.map_config import MAP_STYLE, COLORS, TOOLTIP_STYLE, DEFAULT_ZOOM, DEFAULT_HEIGHT
 
 
@@ -15,12 +19,23 @@ def display_prediction_map(result, mileposts, i5_line, normalized, direction_enc
     confidence = result.get("confidence", "Unknown")
     direction = "Northbound" if direction_encoded == 0 else "Southbound"
 
-    # Colors
-    circle_color = (
-        COLORS["circle_high"] if confidence == "High"
-        else COLORS["circle_medium"] if confidence == "Medium"
-        else COLORS["circle_low"]
-    )
+    # Color based on Traffic Impact Severity
+    high_impact_pred = result.get("high_impact_prediction", 0)
+    prob = float(result.get("high_impact_probability", 0.0))
+
+    if high_impact_pred:  # predicted severe impact
+        r = int(255)
+        g = int(165 - (prob * 80))
+        b = int(0)
+    else:  # predicted low / no severe impact
+        r = int(0 + prob * 255)
+        g = int(128 + prob * 127)
+        b = int(0)
+
+    # transparency (alpha) scales smoothly with probability (0.0–1.0)
+    alpha = int(60 + prob * 120)  # 60–180 range
+
+    circle_color = [r, g, b, alpha]
 
     color_start = COLORS["dot_start_nb"] if direction_encoded == 0 else COLORS["dot_start_sb"]
     color_center = COLORS["dot_center"]
@@ -32,13 +47,11 @@ def display_prediction_map(result, mileposts, i5_line, normalized, direction_enc
     start_mile = center_mile - sign * impact_radius
     end_mile = center_mile + sign * impact_radius
 
-    def find_milepost_coord(df, mile_value):
-        nearest = df.iloc[(df["Milepost"] - mile_value).abs().argsort().iloc[0]]
-        return nearest["lat"], nearest["lon"], nearest["Milepost"]
-
-    start_lat, start_lon, start_mp = find_milepost_coord(mileposts, start_mile)
-    center_lat, center_lon, center_mp = find_milepost_coord(mileposts, center_mile)
-    end_lat, end_lon, end_mp = find_milepost_coord(mileposts, end_mile)
+    start_lat, start_lon, start_mp = find_nearest_milepost_coord(
+        mileposts, start_mile)
+    center_lat, center_lon, center_mp = find_nearest_milepost_coord(
+        mileposts, center_mile)
+    end_lat, end_lon, end_mp = find_nearest_milepost_coord(mileposts, end_mile)
 
     # Layers
     path_layer = make_path_layer(i5_line)
@@ -51,15 +64,21 @@ def display_prediction_map(result, mileposts, i5_line, normalized, direction_enc
         pickable=True,
     )
     dot_data = [
-        {"lat": start_lat, "lon": start_lon, "label": f"Start MP {start_mp:.1f}", "color": color_start},
-        {"lat": center_lat, "lon": center_lon, "label": f"Incident MP {center_mp:.1f}", "color": color_center},
-        {"lat": end_lat, "lon": end_lon, "label": f"End MP {end_mp:.1f}", "color": color_end},
+        {"lat": start_lat, "lon": start_lon,
+            "label": f"Start MP {start_mp:.1f}", "color": color_start},
+        {"lat": center_lat, "lon": center_lon,
+            "label": f"Incident MP {center_mp:.1f}", "color": color_center},
+        {"lat": end_lat, "lon": end_lon,
+            "label": f"End MP {end_mp:.1f}", "color": color_end},
     ]
-    dot_layer = pdk.Layer("ScatterplotLayer", data=dot_data, get_position='[lon, lat]', get_color='color', get_radius=100)
-    label_layer = pdk.Layer("TextLayer", data=dot_data, get_position='[lon, lat]', get_text='label', get_size=12, get_color=COLORS["label_text"])
+    dot_layer = pdk.Layer("ScatterplotLayer", data=dot_data,
+                          get_position='[lon, lat]', get_color='color', get_radius=100)
+    label_layer = pdk.Layer("TextLayer", data=dot_data,
+                            get_position='[lon, lat]', get_text='label', get_size=12, get_color=COLORS["label_text"])
 
     # Deck
-    view_state = pdk.ViewState(latitude=center_lat, longitude=center_lon, zoom=DEFAULT_ZOOM)
+    view_state = pdk.ViewState(
+        latitude=center_lat, longitude=center_lon, zoom=DEFAULT_ZOOM)
     deck = pdk.Deck(
         map_style=MAP_STYLE,
         initial_view_state=view_state,
