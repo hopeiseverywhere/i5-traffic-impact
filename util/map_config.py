@@ -1,8 +1,3 @@
-"""
-map_config.py
--------------
-Centralized configuration for PyDeck maps and visual settings.
-"""
 
 # ====== Base map style ======
 MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"

@@ -1,8 +1,3 @@
-"""
-sidebar_config.py
------------------
-Central configuration for sidebar categorical mappings and default input settings.
-"""
 
 # =========================
 # CATEGORY MAPPINGS
