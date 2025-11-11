@@ -1,0 +1,10 @@
+{
+  "0": "Disabled Vehicle",
+  "1": "Debris",
+  "2": "Abandoned Vehicle",
+  "3": "Non-Injury Collision",
+  "4": "Injury Collision",
+  "5": "Fatality Collision",
+  "6": "Other",
+  "7": "Unknown"
+}

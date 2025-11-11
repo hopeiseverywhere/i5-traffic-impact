@@ -1,0 +1,30 @@
+{
+  "model_type": "Random Forest",
+  "n_features": 12,
+  "features": [
+    "hour",
+    "day_of_week",
+    "is_rush_hour",
+    "is_weekend",
+    "location_zone",
+    "milepost_normalized",
+    "incident_type_encoded",
+    "lane_closure_encoded",
+    "direction_encoded",
+    "blocking_encoded",
+    "severity_score",
+    "rush_blocking_interaction"
+  ],
+  "classification_metrics": {
+    "f1_score": 0.5207363369386148,
+    "roc_auc": 0.9204762825223303
+  },
+  "regression_metrics": {
+    "rmse": 5.693053188117146,
+    "mae": 3.625784169759081,
+    "r2": 0.4634788706799129
+  },
+  "training_date": "2025-11-10 14:29:10",
+  "training_samples": 143957,
+  "test_samples": 35990
+}
