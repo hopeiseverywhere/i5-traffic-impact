@@ -4,7 +4,7 @@ MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
 
 # ====== Default view settings ======
 DEFAULT_ZOOM = 9
-DEFAULT_HEIGHT = 500
+DEFAULT_HEIGHT = 700
 
 # ====== Color palette (RGBA) ======
 COLORS = {
