@@ -8,8 +8,4 @@ joblib==1.4.0
 
 scikit-learn==1.5.2  
 
-geopandas==1.0.1
-shapely==2.0.4
-
-fiona==1.9.6
-pyproj==3.6.1
+geopandas[all]==1.0.1
