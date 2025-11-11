@@ -27,6 +27,11 @@ params, submitted = prediction_sidebar(mileposts)
 st.title("🚧 I-5 Traffic Incident Impact Predictor")
 st.caption("Estimate predicted delay and affected distance using machine learning models.")
 
+# ======================================================
+# CUSTOM CSS STYLES
+# ======================================================
+
+
 if submitted:
     # -----------------------------------------
     # Run model
