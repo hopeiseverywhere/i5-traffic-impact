@@ -15,8 +15,8 @@ st.set_page_config(page_title="🚧 I-5 Incident Impact Predictor", layout="wide
 # ======================================================
 # LOAD DATA
 # ======================================================
-mileposts = load_mileposts("./geodata/i5_milepost.geojson")
-i5_line = load_i5_geojson("./geodata/i5_filtered.geojson")
+mileposts = load_mileposts("./geodata/i5_milepost_in_range.geojson")
+i5_line = load_i5_geojson("./geodata/i5_mainline.geojson")
 
 # ======================================================
 # INIT SESSION STATE

@@ -102,11 +102,6 @@ def nearest_milepost_from_latlon(mileposts: pd.DataFrame, lat: float, lon: float
     Snap a map-click (lat, lon) to the nearest milepost:
        direction_encoded = 0 → NB ('N')
        direction_encoded = 1 → SB ('S')
-
-    THIS VERSION:
-    ✔ Filters by NB/SB correctly
-    ✔ Computes haversine distance
-    ✔ Normalizes ALONG THAT DIRECTION ONLY
     """
 
     mile_col, lat_col, lon_col = detect_mile_latlon_columns(mileposts)
