@@ -3,6 +3,19 @@ import folium
 from folium.plugins import Draw
 from streamlit_folium import st_folium
 
+from util.map_config import (
+    DEFAULT_ZOOM,
+    IMPACT_ZOOM_LEVELS,
+    MILES_TO_METERS,
+    HIGH_IMPACT_COLOR_EDGE,
+    HIGH_IMPACT_COLOR_FILL,
+    LOW_IMPACT_COLOR_EDGE,
+    LOW_IMPACT_COLOR_FILL,
+    DIRECTION_ICONS,
+    DRAW_OPTIONS,
+    EDIT_OPTIONS,
+)
+
 from util.geo_utils import (
     get_coordinates_from_normalized,
     get_approx_milepost_number,
@@ -20,29 +33,35 @@ def display_unified_map(mileposts, i5_line, selected_norm, prediction_result, di
 
     # Map center
     if selected_norm is not None:
-        center_lat, center_lon = get_coordinates_from_normalized(
-            mileposts, selected_norm)
+        center_lat, center_lon = get_coordinates_from_normalized(mileposts, selected_norm)
     else:
         center_lat = float(mileposts[lat_col].mean())
         center_lon = float(mileposts[lon_col].mean())
 
-    # Auto zoom
+    # Zoom selection
     if prediction_result is None or selected_norm is None:
-        zoom = 8
+        zoom = DEFAULT_ZOOM
     else:
-        impact_radius = prediction_result.get("impact_radius_miles", 1)
-        zoom = 13 if impact_radius < 2 else (12 if impact_radius < 5 else 11)
+        radius = prediction_result.get("impact_radius_miles", 1)
+        zoom = (
+            IMPACT_ZOOM_LEVELS["small"] if radius < 2 else
+            IMPACT_ZOOM_LEVELS["medium"] if radius < 5 else
+            IMPACT_ZOOM_LEVELS["large"]
+        )
 
     # Create map
-    m = folium.Map(location=[center_lat, center_lon],
-                   zoom_start=zoom, control_scale=True)
+    m = folium.Map(
+        location=[center_lat, center_lon],
+        zoom_start=zoom,
+        control_scale=True,
+    )
 
-    # I-5 line
+    # I-5 line overlay
     if i5_line is not None:
         folium.GeoJson(
             i5_line,
             name="I-5 Corridor",
-            tooltip="I-5 Corridor",
+            tooltip="I-5 Corridor"
         ).add_to(m)
 
     # Prediction overlay
@@ -51,20 +70,22 @@ def display_unified_map(mileposts, i5_line, selected_norm, prediction_result, di
         impact_radius = prediction_result["impact_radius_miles"]
         predicted_delay = prediction_result["predicted_delay_minutes"]
         prob = prediction_result["high_impact_probability"]
-        high_impact_pred = prediction_result["high_impact_prediction"]
+        high = prediction_result["high_impact_prediction"]
 
-        direction = "Northbound" if direction_encoded == 0 else "Southbound"
+        direction_info = DIRECTION_ICONS[direction_encoded]
+        direction_label = direction_info["label"]
 
-        color = "#ff6600" if high_impact_pred else "#33aa33"
-        fill_color = "#ff8533" if high_impact_pred else "#5cd65c"
+        # Colors
+        edge_color = HIGH_IMPACT_COLOR_EDGE if high else LOW_IMPACT_COLOR_EDGE
+        fill_color = HIGH_IMPACT_COLOR_FILL if high else LOW_IMPACT_COLOR_FILL
 
-        # Mile calculations
+        # Milepost calculations
         center_mile = get_approx_milepost_number(mileposts, selected_norm)
         sign = 1 if direction_encoded == 0 else -1
         start_mile = center_mile - sign * impact_radius
         end_mile = center_mile + sign * impact_radius
 
-        # Direction-aware milepost snapping
+        # Nearest snapped mileposts
         start_lat, start_lon, start_mp = find_nearest_milepost_coord_directional(
             mileposts, start_mile, direction_encoded
         )
@@ -78,72 +99,59 @@ def display_unified_map(mileposts, i5_line, selected_norm, prediction_result, di
         # Impact circle
         folium.Circle(
             location=[center_lat, center_lon],
-            radius=impact_radius * 1609.34,
-            color=color,
+            radius=impact_radius * MILES_TO_METERS,
+            color=edge_color,
             fill=True,
             fill_color=fill_color,
             fill_opacity=min(0.15 + prob * 0.5, 0.85),
             tooltip=(
-                f"<b>{direction} Impact Zone</b><br>"
+                f"<b>{direction_label} Impact Zone</b><br>"
                 f"Predicted Delay: {predicted_delay:.1f} min<br>"
                 f"Radius: ±{impact_radius:.1f} mi<br>"
                 f"Mileposts: {start_mp:.1f} → {end_mp:.1f}"
             ),
         ).add_to(m)
 
-        # ============================
-        # Direction-aware icons
-        # ============================
-        if direction_encoded == 0:   # Northbound → two ↑
-            start_icon = folium.Icon(color="blue", icon="arrow-up")
-            end_icon = folium.Icon(color="blue", icon="arrow-up")
-        else:                        # Southbound → two ↓
-            start_icon = folium.Icon(color="blue", icon="arrow-down")
-            end_icon = folium.Icon(color="blue", icon="arrow-down")
+        # Icons
+        start_icon_color, start_icon_symbol = direction_info["start"]
+        end_icon_color, end_icon_symbol = direction_info["end"]
 
-        center_icon = folium.Icon(color="red", icon="info-sign")
-
-        # ============================
-        # Markers
-        # ============================
         folium.Marker(
             [start_lat, start_lon],
-            icon=start_icon,
+            icon=folium.Icon(color=start_icon_color, icon=start_icon_symbol),
             tooltip=f"Start MP {start_mp:.1f}",
         ).add_to(m)
 
         folium.Marker(
             [center_lat, center_lon],
-            icon=center_icon,
+            icon=folium.Icon(color="red", icon="info-sign"),
             tooltip=f"Incident MP {center_mp:.1f}",
         ).add_to(m)
 
         folium.Marker(
             [end_lat, end_lon],
-            icon=end_icon,
+            icon=folium.Icon(color=end_icon_color, icon=end_icon_symbol),
             tooltip=f"End MP {end_mp:.1f}",
         ).add_to(m)
 
     # Drawing tool
     Draw(
-        draw_options={"polyline": False, "polygon": False, "rectangle": False,
-                      "circle": False, "circlemarker": False, "marker": True},
-        edit_options={}
+        draw_options=DRAW_OPTIONS,
+        edit_options=EDIT_OPTIONS,
     ).add_to(m)
 
-    # Render big map
+    # Render map
     output = st_folium(
         m,
         width="100%",
         height=750,
         returned_objects=["last_active_drawing", "all_drawings"],
     )
-    
-    
 
-    # Snap user click
+    # Snap user click → milepost
     if output:
         feature = output.get("last_active_drawing")
+
         if not feature:
             drawings = output.get("all_drawings") or []
             if drawings:

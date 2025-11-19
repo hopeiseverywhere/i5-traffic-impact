@@ -5,12 +5,15 @@ from util.sidebar_config import INCIDENT_TYPES, LANE_CLOSURES, DIRECTIONS, DEFAU
 def prediction_sidebar(selected_milepost_normalized, approx_mile):
     """
     Sidebar form for prediction inputs.
-
-    Now uses ONLY map-selected milepost (no location_zone).
     """
 
     st.sidebar.header("Predict Traffic Incident Impact")
 
+    if st.sidebar.button("🔄 Reset All"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
+        
     # -------------------------------------------
     # TIME FEATURES
     # -------------------------------------------
@@ -41,7 +44,7 @@ def prediction_sidebar(selected_milepost_normalized, approx_mile):
     else:
         milepost_normalized = DEFAULTS["milepost_normalized"]
         st.sidebar.warning(
-            "📍 Click on the map to choose a milepost."
+            "📍 Use a place marker to choose a milepost."
         )
 
     # -------------------------------------------

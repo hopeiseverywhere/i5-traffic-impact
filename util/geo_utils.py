@@ -95,7 +95,7 @@ def find_nearest_milepost_coord_directional(mileposts: pd.DataFrame, mile_value:
 
 
 # ------------------------------------------------------
-# MAIN: SNAP (lat, lon) → nearest MP with direction logic
+# SNAP (lat, lon) → nearest MP with direction logic
 # ------------------------------------------------------
 def nearest_milepost_from_latlon(mileposts: pd.DataFrame, lat: float, lon: float, direction_encoded: int):
     """
