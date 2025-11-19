@@ -21,7 +21,6 @@ def load_incidents(path: str) -> pd.DataFrame:
 # Milepost & I-5 GeoJSON
 # --------------------------
 
-
 @st.cache_resource
 def load_mileposts(path: str) -> gpd.GeoDataFrame:
     gdf = gpd.read_file(path)

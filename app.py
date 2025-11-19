@@ -16,7 +16,7 @@ st.set_page_config(page_title="🚧 I-5 Incident Impact Predictor", layout="wide
 # LOAD DATA
 # ======================================================
 mileposts = load_mileposts("./geodata/i5_milepost.geojson")
-i5_line = load_i5_geojson("./geodata/i5.geojson")
+i5_line = load_i5_geojson("./geodata/i5_filtered.geojson")
 
 # ======================================================
 # INIT SESSION STATE
@@ -35,7 +35,8 @@ if "direction_encoded" not in st.session_state:
 # HEADER + CSS
 # ======================================================
 st.title("🚧 I-5 Traffic Incident Impact Predictor")
-st.caption("Estimate predicted delay and affected distance using machine learning models.")
+st.caption(
+    "Estimate predicted delay and affected distance using machine learning models.")
 # ======================================================
 # SHOW PREDICTION RESULT (IF ANY)
 # ======================================================
@@ -64,7 +65,7 @@ if result is not None:
     col5.metric("Model Certainty", result["confidence"])
 
     st.markdown("---")
-    
+
 st.markdown("""
     <style>
         /* Reduce spacing below captions and headers */
@@ -130,13 +131,11 @@ if submitted:
     if st.session_state["selected_norm"] is None:
         st.session_state["selected_norm"] = params["milepost_normalized"]
         st.session_state["approx_mile"] = None  # optional
-        
+
     result = predict_incident_impact(params)
     st.session_state["prediction_result"] = result
     st.session_state["direction_encoded"] = params["direction_encoded"]
     st.rerun()
-
-
 
     # -----------------------------------------
     # Model Performance Section
