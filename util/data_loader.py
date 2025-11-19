@@ -25,10 +25,22 @@ def load_incidents(path: str) -> pd.DataFrame:
 @st.cache_resource
 def load_mileposts(path: str) -> gpd.GeoDataFrame:
     gdf = gpd.read_file(path)
-    gdf = gdf.rename(columns={"SRMP": "Milepost", "Latitude": "lat", "Longitude": "lon"})
+
+    # rename columns to predictable names
+    gdf = gdf.rename(columns={
+        "SRMP": "Milepost",
+        "Latitude": "lat",
+        "Longitude": "lon",
+    })
+
+    # ensure milepost number
     gdf["Milepost"] = pd.to_numeric(gdf["Milepost"], errors="coerce")
+
+    # normalize direction once and for all
     gdf["Direction"] = gdf["Direction"].apply(normalize_direction)
-    return gdf[["Milepost", "lat", "lon", "Direction", "AheadBackInd"]].dropna(how="all")
+
+    # keep only useful columns
+    return gdf[["Milepost", "lat", "lon", "Direction"]].dropna()
 
 @st.cache_resource
 def load_i5_geojson(path: str):

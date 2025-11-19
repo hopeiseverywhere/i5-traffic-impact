@@ -1,102 +1,164 @@
 import streamlit as st
-import pydeck as pdk
-from util.map_layers import make_path_layer
+import folium
+from folium.plugins import Draw
+from streamlit_folium import st_folium
+
 from util.geo_utils import (
     get_coordinates_from_normalized,
     get_approx_milepost_number,
-    find_nearest_milepost_coord,
+    find_nearest_milepost_coord_directional,
+    nearest_milepost_from_latlon,
+    detect_mile_latlon_columns,
 )
-from util.map_config import MAP_STYLE, COLORS, TOOLTIP_STYLE, DEFAULT_ZOOM, DEFAULT_HEIGHT
 
 
-def display_prediction_map(result, mileposts, i5_line, normalized, direction_encoded):
-    """Display predicted impact zone on map."""
+def display_unified_map(mileposts, i5_line, selected_norm, prediction_result, direction_encoded):
+    """Unified map with input + prediction visualization."""
 
-    # Extract key info
-    lat, lon = get_coordinates_from_normalized(mileposts, normalized)
-    impact_radius = result.get("impact_radius_miles", 0)
-    predicted_delay = result.get("predicted_delay_minutes", 0)
-    confidence = result.get("confidence", "Unknown")
-    direction = "Northbound" if direction_encoded == 0 else "Southbound"
+    # Detect columns
+    mile_col, lat_col, lon_col = detect_mile_latlon_columns(mileposts)
 
-    # Color based on Traffic Impact Severity
-    high_impact_pred = result.get("high_impact_prediction", 0)
-    prob = float(result.get("high_impact_probability", 0.0))
+    # Map center
+    if selected_norm is not None:
+        center_lat, center_lon = get_coordinates_from_normalized(
+            mileposts, selected_norm)
+    else:
+        center_lat = float(mileposts[lat_col].mean())
+        center_lon = float(mileposts[lon_col].mean())
 
-    if high_impact_pred:  # predicted severe impact
-        r = int(255)
-        g = int(165 - (prob * 80))
-        b = int(0)
-    else:  # predicted low / no severe impact
-        r = int(0 + prob * 255)
-        g = int(128 + prob * 127)
-        b = int(0)
+    # Auto zoom
+    if prediction_result is None or selected_norm is None:
+        zoom = 8
+    else:
+        impact_radius = prediction_result.get("impact_radius_miles", 1)
+        zoom = 13 if impact_radius < 2 else (12 if impact_radius < 5 else 11)
 
-    # transparency (alpha) scales smoothly with probability (0.0–1.0)
-    alpha = int(60 + prob * 120)  # 60–180 range
+    # Create map
+    m = folium.Map(location=[center_lat, center_lon],
+                   zoom_start=zoom, control_scale=True)
 
-    circle_color = [r, g, b, alpha]
+    # I-5 line
+    if i5_line is not None:
+        folium.GeoJson(
+            i5_line,
+            name="I-5 Corridor",
+            tooltip="I-5 Corridor",
+        ).add_to(m)
 
-    color_start = COLORS["dot_start_nb"] if direction_encoded == 0 else COLORS["dot_start_sb"]
-    color_center = COLORS["dot_center"]
-    color_end = COLORS["dot_end"]
+    # Prediction overlay
+    if prediction_result is not None and selected_norm is not None:
 
-    # Compute mileposts
-    center_mile = get_approx_milepost_number(mileposts, normalized)
-    sign = 1 if direction_encoded == 0 else -1
-    start_mile = center_mile - sign * impact_radius
-    end_mile = center_mile + sign * impact_radius
+        impact_radius = prediction_result["impact_radius_miles"]
+        predicted_delay = prediction_result["predicted_delay_minutes"]
+        prob = prediction_result["high_impact_probability"]
+        high_impact_pred = prediction_result["high_impact_prediction"]
 
-    start_lat, start_lon, start_mp = find_nearest_milepost_coord(
-        mileposts, start_mile)
-    center_lat, center_lon, center_mp = find_nearest_milepost_coord(
-        mileposts, center_mile)
-    end_lat, end_lon, end_mp = find_nearest_milepost_coord(mileposts, end_mile)
+        direction = "Northbound" if direction_encoded == 0 else "Southbound"
 
-    # Layers
-    path_layer = make_path_layer(i5_line)
-    circle_layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=[{"lat": lat, "lon": lon}],
-        get_position='[lon, lat]',
-        get_radius=impact_radius * 1609.34,
-        get_fill_color=circle_color,
-        pickable=True,
-    )
-    dot_data = [
-        {"lat": start_lat, "lon": start_lon,
-            "label": f"Start MP {start_mp:.1f}", "color": color_start},
-        {"lat": center_lat, "lon": center_lon,
-            "label": f"Incident MP {center_mp:.1f}", "color": color_center},
-        {"lat": end_lat, "lon": end_lon,
-            "label": f"End MP {end_mp:.1f}", "color": color_end},
-    ]
-    dot_layer = pdk.Layer("ScatterplotLayer", data=dot_data,
-                          get_position='[lon, lat]', get_color='color', get_radius=100)
-    label_layer = pdk.Layer("TextLayer", data=dot_data,
-                            get_position='[lon, lat]', get_text='label', get_size=12, get_color=COLORS["label_text"])
+        color = "#ff6600" if high_impact_pred else "#33aa33"
+        fill_color = "#ff8533" if high_impact_pred else "#5cd65c"
 
-    # Deck
-    view_state = pdk.ViewState(
-        latitude=center_lat, longitude=center_lon, zoom=DEFAULT_ZOOM)
-    deck = pdk.Deck(
-        map_style=MAP_STYLE,
-        initial_view_state=view_state,
-        layers=[path_layer, circle_layer, dot_layer, label_layer],
-        tooltip={
-            "html": (
+        # Mile calculations
+        center_mile = get_approx_milepost_number(mileposts, selected_norm)
+        sign = 1 if direction_encoded == 0 else -1
+        start_mile = center_mile - sign * impact_radius
+        end_mile = center_mile + sign * impact_radius
+
+        # Direction-aware milepost snapping
+        start_lat, start_lon, start_mp = find_nearest_milepost_coord_directional(
+            mileposts, start_mile, direction_encoded
+        )
+        center_lat, center_lon, center_mp = find_nearest_milepost_coord_directional(
+            mileposts, center_mile, direction_encoded
+        )
+        end_lat, end_lon, end_mp = find_nearest_milepost_coord_directional(
+            mileposts, end_mile, direction_encoded
+        )
+
+        # Impact circle
+        folium.Circle(
+            location=[center_lat, center_lon],
+            radius=impact_radius * 1609.34,
+            color=color,
+            fill=True,
+            fill_color=fill_color,
+            fill_opacity=min(0.15 + prob * 0.5, 0.85),
+            tooltip=(
                 f"<b>{direction} Impact Zone</b><br>"
                 f"Predicted Delay: {predicted_delay:.1f} min<br>"
-                f"Impact Radius: ±{impact_radius:.1f} mi<br>"
+                f"Radius: ±{impact_radius:.1f} mi<br>"
                 f"Mileposts: {start_mp:.1f} → {end_mp:.1f}"
             ),
-            "style": TOOLTIP_STYLE,
-        },
-    )
+        ).add_to(m)
 
-    st.pydeck_chart(deck, use_container_width=True, height=DEFAULT_HEIGHT)
+        # ============================
+        # Direction-aware icons
+        # ============================
+        if direction_encoded == 0:   # Northbound → two ↑
+            start_icon = folium.Icon(color="blue", icon="arrow-up")
+            end_icon = folium.Icon(color="blue", icon="arrow-up")
+        else:                        # Southbound → two ↓
+            start_icon = folium.Icon(color="blue", icon="arrow-down")
+            end_icon = folium.Icon(color="blue", icon="arrow-down")
 
-    st.caption(
-        f"{direction} predicted impact spans from MP {start_mp:.1f} to MP {end_mp:.1f} "
-        f"(centered at MP {center_mp:.1f}, ±{impact_radius:.1f} mi, predicted delay {predicted_delay:.1f} min)."
+        center_icon = folium.Icon(color="red", icon="info-sign")
+
+        # ============================
+        # Markers
+        # ============================
+        folium.Marker(
+            [start_lat, start_lon],
+            icon=start_icon,
+            tooltip=f"Start MP {start_mp:.1f}",
+        ).add_to(m)
+
+        folium.Marker(
+            [center_lat, center_lon],
+            icon=center_icon,
+            tooltip=f"Incident MP {center_mp:.1f}",
+        ).add_to(m)
+
+        folium.Marker(
+            [end_lat, end_lon],
+            icon=end_icon,
+            tooltip=f"End MP {end_mp:.1f}",
+        ).add_to(m)
+
+    # Drawing tool
+    Draw(
+        draw_options={"polyline": False, "polygon": False, "rectangle": False,
+                      "circle": False, "circlemarker": False, "marker": True},
+        edit_options={}
+    ).add_to(m)
+
+    # Render big map
+    output = st_folium(
+        m,
+        width="100%",
+        height=750,
+        returned_objects=["last_active_drawing", "all_drawings"],
     )
+    
+    
+
+    # Snap user click
+    if output:
+        feature = output.get("last_active_drawing")
+        if not feature:
+            drawings = output.get("all_drawings") or []
+            if drawings:
+                feature = drawings[-1]
+
+        if feature and feature["geometry"]["type"] == "Point":
+            lon, lat = feature["geometry"]["coordinates"]
+
+            norm_pos, approx_mile, snap_lat, snap_lon = nearest_milepost_from_latlon(
+                mileposts, lat, lon, direction_encoded
+            )
+
+            st.session_state["selected_norm"] = norm_pos
+            st.session_state["approx_mile"] = approx_mile
+
+            st.caption(
+                f"📍 Snapped to I-5 MP ≈ {approx_mile:.1f} (normalized {norm_pos:.3f})"
+            )

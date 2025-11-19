@@ -1,14 +1,16 @@
 import streamlit as st
+
 from prediction import predict_incident_impact
 from util.data_loader import load_mileposts, load_i5_geojson
 from components.sidebar import prediction_sidebar
-from components.map_viz import display_prediction_map
+from components.map_viz import display_unified_map
 
 
 # ======================================================
 # PAGE CONFIG
 # ======================================================
 st.set_page_config(page_title="🚧 I-5 Incident Impact Predictor", layout="wide")
+
 
 # ======================================================
 # LOAD DATA
@@ -17,19 +19,52 @@ mileposts = load_mileposts("./geodata/i5_milepost.geojson")
 i5_line = load_i5_geojson("./geodata/i5.geojson")
 
 # ======================================================
-# SIDEBAR INPUTS
+# INIT SESSION STATE
 # ======================================================
-params, submitted = prediction_sidebar(mileposts)
+if "selected_norm" not in st.session_state:
+    st.session_state["selected_norm"] = None
+if "approx_mile" not in st.session_state:
+    st.session_state["approx_mile"] = None
+if "prediction_result" not in st.session_state:
+    st.session_state["prediction_result"] = None
+if "direction_encoded" not in st.session_state:
+    st.session_state["direction_encoded"] = 0  # default NB
+
 
 # ======================================================
-# MAIN LAYOUT
+# HEADER + CSS
 # ======================================================
 st.title("🚧 I-5 Traffic Incident Impact Predictor")
 st.caption("Estimate predicted delay and affected distance using machine learning models.")
+# ======================================================
+# SHOW PREDICTION RESULT (IF ANY)
+# ======================================================
+result = st.session_state["prediction_result"]
 
-# ======================================================
-# CUSTOM CSS STYLES
-# ======================================================
+if result is not None:
+    st.subheader("Prediction Summary")
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric(
+        "Traffic Impact Severity",
+        "⚠️ Yes" if result["high_impact_prediction"] else "✅ No",
+    )
+    col2.metric(
+        "Severe Impact Probability",
+        f"{result['high_impact_probability']*100:.1f}%",
+    )
+    col3.metric(
+        "Predicted Delay",
+        f"{result['predicted_delay_minutes']:.1f} min",
+    )
+    col4.metric(
+        "Impact Radius",
+        f"{result['impact_radius_miles']:.2f} mi",
+    )
+    col5.metric("Model Certainty", result["confidence"])
+
+    st.markdown("---")
+    
 st.markdown("""
     <style>
         /* Reduce spacing below captions and headers */
@@ -46,10 +81,10 @@ st.markdown("""
 
         /* Adjust metric label and value sizes */
         [data-testid="stMetricLabel"] {
-            font-size: 0.8rem !important;   /* smaller label */
+            font-size: 0.8rem !important;
         }
         [data-testid="stMetricValue"] {
-            font-size: 1.3rem !important;   /* slightly larger result text */
+            font-size: 1.3rem !important;
             font-weight: 600 !important;
         }
 
@@ -67,40 +102,42 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ======================================================
+# MAIN LAYOUT: MAP + SIDEBAR
+# ======================================================
+
+# map_col, _ = st.columns([3, 1])
+
+display_unified_map(
+    mileposts,
+    i5_line,
+    selected_norm=st.session_state["selected_norm"],
+    prediction_result=st.session_state["prediction_result"],
+    direction_encoded=st.session_state["direction_encoded"],
+)
+
+# Sidebar builds params using the (possibly updated) selection
+params, submitted = prediction_sidebar(
+    st.session_state["selected_norm"],
+    st.session_state["approx_mile"],
+)
+
+# ======================================================
+# HANDLE PREDICTION BUTTON
+# ======================================================
 if submitted:
-    # -----------------------------------------
-    # Run model
-    # -----------------------------------------
+    # If user never clicked the map, use the default milepost for map display
+    if st.session_state["selected_norm"] is None:
+        st.session_state["selected_norm"] = params["milepost_normalized"]
+        st.session_state["approx_mile"] = None  # optional
+        
     result = predict_incident_impact(params)
+    st.session_state["prediction_result"] = result
+    st.session_state["direction_encoded"] = params["direction_encoded"]
+    st.rerun()
 
-    # -----------------------------------------
-    # Display prediction results
-    # -----------------------------------------
-    st.subheader("Prediction Summary")
 
-    col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Traffic Impact Severity", "⚠️ Yes" if result["high_impact_prediction"] else "✅ No")
-    col2.metric("Severe Impact Probability", f"{result['high_impact_probability']*100:.1f}%")
-    col3.metric("Predicted Delay", f"{result['predicted_delay_minutes']:.1f} min")
-    col4.metric("Impact Radius", f"{result['impact_radius_miles']:.2f} mi")
-    col5.metric("Model Certainty", result["confidence"])
 
-    st.markdown("---")
-
-    # -----------------------------------------
-    # Map visualization
-    # -----------------------------------------
-    st.subheader("Predicted Impact Visualization")
-    display_prediction_map(
-        result,
-        mileposts,
-        i5_line,
-        params["milepost_normalized"],
-        params["direction_encoded"],  # 0 = NB, 1 = SB
-    )
-
-    st.markdown("---")
-    
     # -----------------------------------------
     # Model Performance Section
     # -----------------------------------------
@@ -113,19 +150,34 @@ if submitted:
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("Classifier", result["classifier_name"])
-                st.metric("F1 Score", f"{metadata['classification_metrics']['f1_score']:.3f}")
+                st.metric(
+                    "F1 Score",
+                    f"{metadata['classification_metrics']['f1_score']:.3f}",
+                )
             with col2:
-                st.metric("ROC-AUC", f"{metadata['classification_metrics']['roc_auc']:.3f}")
+                st.metric(
+                    "ROC-AUC",
+                    f"{metadata['classification_metrics']['roc_auc']:.3f}",
+                )
 
             # --- Regressor section ---
             st.markdown("#### Regressor Metrics")
             col3, col4 = st.columns(2)
             with col3:
                 st.metric("Regressor", result["regressor_name"])
-                st.metric("RMSE", f"{metadata['regression_metrics']['rmse']:.2f} min")
+                st.metric(
+                    "RMSE",
+                    f"{metadata['regression_metrics']['rmse']:.2f} min",
+                )
             with col4:
-                st.metric("MAE", f"{metadata['regression_metrics']['mae']:.2f} min")
-                st.metric("R²", f"{metadata['regression_metrics']['r2']:.3f}")
+                st.metric(
+                    "MAE",
+                    f"{metadata['regression_metrics']['mae']:.2f} min",
+                )
+                st.metric(
+                    "R²",
+                    f"{metadata['regression_metrics']['r2']:.3f}",
+                )
 
             # --- Training info ---
             st.caption(
@@ -139,7 +191,8 @@ if submitted:
                 st.write(", ".join(metadata["features"]))
         else:
             st.info("Model metadata not available.")
-
-
 else:
-    st.info("Adjust parameters in the sidebar and click **Predict Impact** to generate results.")
+    st.info(
+        "Use the marker tool on the map to choose an incident location on I-5, "
+        "adjust parameters in the sidebar, and click **Predict Impact**."
+    )
