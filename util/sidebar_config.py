@@ -32,13 +32,11 @@ DIRECTIONS = {
 # SLIDER DEFAULTS
 # =========================
 DEFAULTS = {
-    "hour": 8,
+    "hour": 12,
     "day_of_week": 2,
-    "location_zone": 5,
-    "milepost_normalized": 0.5,
-    "incident_index": 3,  # default = Non-Injury Collision
-    "lane_index": 3,
-    "direction_index": 0,
-    "blocking_index": 1,
-    "severity_default": 2,
+    "month": 6,
+    "day_of_month": 15,
+    "incident_type": 0,      # index in INCIDENT_TYPES keys
+    "lane_closure": 0,       # index in LANE_CLOSURES keys
+    "blocking": 0,
 }

@@ -1,7 +1,7 @@
 # ===============================
 # ZOOM CONFIGURATION
 # ===============================
-DEFAULT_ZOOM = 8
+DEFAULT_ZOOM = 10
 
 IMPACT_ZOOM_LEVELS = {
     "small": 13,   # < 2 miles
@@ -9,14 +9,6 @@ IMPACT_ZOOM_LEVELS = {
     "large": 11,   # >= 5 miles
 }
 
-# ===============================
-# COLOR SCHEME
-# ===============================
-HIGH_IMPACT_COLOR_EDGE = "#ff6600"
-HIGH_IMPACT_COLOR_FILL = "#ff8533"
-
-LOW_IMPACT_COLOR_EDGE = "#33aa33"
-LOW_IMPACT_COLOR_FILL = "#5cd65c"
 
 # ===============================
 # MILEPOST → METERS CONVERSION
@@ -52,3 +44,15 @@ DRAW_OPTIONS = {
 }
 
 EDIT_OPTIONS = {}
+
+SEVERITY_COLORS = {
+    0: ("#4CAF50", "#A5D6A7"),   # No Delay → Green
+    1: ("#FFC107", "#FFE082"),   # Minor → Yellow
+    2: ("#FF9800", "#FFCC80"),   # Moderate → Orange
+    3: ("#F44336", "#EF9A9A"),   # Severe → Red
+}
+
+ROAD_COLORS = {
+    0 : "#1d6ef2", # Base road color
+    1 : "#43a560" # HOV road color
+}

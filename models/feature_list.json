@@ -1,14 +1,13 @@
 [
   "hour",
   "day_of_week",
-  "is_rush_hour",
-  "is_weekend",
-  "location_zone",
+  "month",
+  "day_of_month",
   "milepost_normalized",
+  "StartID",
+  "EndID",
+  "useHOV",
   "incident_type_encoded",
   "lane_closure_encoded",
-  "direction_encoded",
-  "blocking_encoded",
-  "severity_score",
-  "rush_blocking_interaction"
+  "blocking_encoded"
 ]

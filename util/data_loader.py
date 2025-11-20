@@ -8,24 +8,6 @@ from util.geo_utils import normalize_direction
 
 
 # ============================================================
-# INCIDENT DATA LOADING
-# ============================================================
-
-@st.cache_data
-def load_incidents(path: str) -> pd.DataFrame:
-    df = pd.read_csv(path)
-    df["Milepost"] = pd.to_numeric(df["Milepost"], errors="coerce")
-    df = df.dropna(subset=["Milepost"])
-
-    if "NotifiedDateTime" in df.columns:
-        df["NotifiedDateTime"] = pd.to_datetime(
-            df["NotifiedDateTime"], errors="coerce")
-        df["hour"] = df["NotifiedDateTime"].dt.hour
-
-    return df
-
-
-# ============================================================
 # MILEPOST GEOJSON LOADING
 # ============================================================
 
@@ -44,9 +26,14 @@ def load_mileposts(path: str) -> gpd.GeoDataFrame:
 
     return gdf[["Milepost", "lat", "lon", "Direction"]].dropna()
 
+@st.cache_resource
+def load_model_metadata(path: str) -> dict:
+    """Load model metadata from JSON file."""
+    with open(path, "r") as f:
+        return json.load(f)
 
 # ============================================================
-# OLD “I-5 CORRIDOR” (still available if needed)
+# DEPRECATED “I-5 CORRIDOR” 
 # ============================================================
 
 @st.cache_resource

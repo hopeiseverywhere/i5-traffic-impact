@@ -1,15 +1,13 @@
-
-
 # ============================================================
 #               SEGMENT LOOKUP 
 # ============================================================
 
 SEGMENT_POINTS = {
-    1: {"Name": "I-5 and University St-NB", "Milepost": 165.83},
-    2: {"Name": "I-5 and 320th St",          "Milepost": 143.64},
-    3: {"Name": "I-5 and SR 526-SB",         "Milepost": 189.44},
-    4: {"Name": "I-5 and 77th St SE-NB",     "Milepost": 189.98},
-    5: {"Name": "I-5 and SR 526-NB",         "Milepost": 189.31},
+    1: {"Name": "1 - I-5 and University St-NB", "Milepost": 165.83},
+    2: {"Name": "2 - I-5 and 320th St",          "Milepost": 143.64},
+    3: {"Name": "3 - I-5 and SR 526-SB",         "Milepost": 189.44},
+    4: {"Name": "4 - I-5 and 77th St SE-NB",     "Milepost": 189.98},
+    5: {"Name": "5 - I-5 and SR 526-NB",         "Milepost": 189.31},
 }
 
 # ============================================================

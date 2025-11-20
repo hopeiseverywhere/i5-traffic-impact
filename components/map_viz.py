@@ -7,13 +7,9 @@ from util.map_config import (
     DEFAULT_ZOOM,
     IMPACT_ZOOM_LEVELS,
     MILES_TO_METERS,
-    HIGH_IMPACT_COLOR_EDGE,
-    HIGH_IMPACT_COLOR_FILL,
-    LOW_IMPACT_COLOR_EDGE,
-    LOW_IMPACT_COLOR_FILL,
     DIRECTION_ICONS,
     DRAW_OPTIONS,
-    EDIT_OPTIONS,
+    EDIT_OPTIONS, SEVERITY_COLORS, ROAD_COLORS
 )
 
 from util.geo_utils import (
@@ -28,6 +24,8 @@ from util.segments import TRIP_SEGMENTS, SEGMENT_POINTS
 # ==================================================================
 #                   MAIN MAP RENDERING FUNCTION
 # ==================================================================
+
+
 def display_unified_map(
     mileposts,
     selected_norm,
@@ -54,7 +52,8 @@ def display_unified_map(
         center_lat = st.session_state["snap_lat"]
         center_lon = st.session_state["snap_lon"]
     elif selected_trip_id is not None:
-        trip = next(t for t in all_trips if t["properties"]["TripId"] == selected_trip_id)
+        trip = next(
+            t for t in all_trips if t["properties"]["TripId"] == selected_trip_id)
         coords = trip["geometry"]["coordinates"]
         mid = len(coords) // 2
         center_lon, center_lat = coords[mid]
@@ -95,9 +94,9 @@ def display_unified_map(
             hov = next(t for t in TRIP_SEGMENTS if t["Id"] == tid)["UsesHOV"]
 
             # Colors: GP = blue, HOV = green
-            base_color = "#1d6ef2"      # blue (non-HOV)
+            base_color = ROAD_COLORS[0]     # blue (non-HOV)
             if hov:
-                base_color = "#43a560"  # green (HOV)
+                base_color = ROAD_COLORS[1]  # green (HOV)
 
             # Selected trip gets a brighter highlight
             highlight_color = base_color
@@ -125,16 +124,27 @@ def display_unified_map(
     # =============================================================
     if prediction_result is not None:
 
+        # ----------------------
+        # Extract Values
+        # ----------------------
         impact_radius = prediction_result["impact_radius_miles"]
         predicted_delay = prediction_result["predicted_delay_minutes"]
-        prob = prediction_result["high_impact_probability"]
-        high = prediction_result["high_impact_prediction"]
 
-        direction_info = DIRECTION_ICONS[direction_encoded]
-        edge_color = HIGH_IMPACT_COLOR_EDGE if high else LOW_IMPACT_COLOR_EDGE
-        fill_color = HIGH_IMPACT_COLOR_FILL if high else LOW_IMPACT_COLOR_FILL
+        severity_label = prediction_result["severity_label"]
+        severity_pred = prediction_result["severity_prediction"]
+        severity_probs = prediction_result["severity_probabilities"]
+        max_prob = max(severity_probs.values())
 
-        # ---- snapped center ----
+        # ----------------------
+        # Colors by Severity
+        # ----------------------
+
+        edge_color, fill_color = SEVERITY_COLORS.get(
+            severity_pred, ("#555", "#AAA"))
+
+        # ----------------------
+        # Snapped Center
+        # ----------------------
         approx_mile = st.session_state.get("approx_mile")
         snap_center_lat = st.session_state.get("snap_lat")
         snap_center_lon = st.session_state.get("snap_lon")
@@ -142,17 +152,17 @@ def display_unified_map(
         if approx_mile is None or snap_center_lat is None:
             if selected_norm is None:
                 selected_norm = 0.5
-
             approx_mile = get_approx_milepost_number(mileposts, selected_norm)
             snap_center_lat, snap_center_lon = get_coordinates_from_normalized(
                 mileposts, selected_norm
             )
-
             st.session_state["approx_mile"] = approx_mile
             st.session_state["snap_lat"] = snap_center_lat
             st.session_state["snap_lon"] = snap_center_lon
 
-        # ---- compute start/end miles ----
+        # ----------------------
+        # Directional mile computation
+        # ----------------------
         sign = 1 if direction_encoded == 0 else -1
         start_mile = approx_mile - sign * impact_radius
         end_mile = approx_mile + sign * impact_radius
@@ -164,33 +174,34 @@ def display_unified_map(
             mileposts, end_mile, direction_encoded
         )
 
-        start_lat, start_lon = mp_start_lat, mp_start_lon
-        end_lat, end_lon = mp_end_lat, mp_end_lon
+        direction_info = DIRECTION_ICONS[direction_encoded]
 
-        # ---- impact circle ----
+        # ----------------------
+        # Circle
+        # ----------------------
         folium.Circle(
             location=[snap_center_lat, snap_center_lon],
             radius=impact_radius * MILES_TO_METERS,
             color=edge_color,
             fill=True,
             fill_color=fill_color,
-            fill_opacity=min(0.15 + prob * 0.5, 0.85),
+            fill_opacity=min(0.25 + max_prob * 0.6, 0.9),
             tooltip=(
-                f"<b>{direction_info['label']} Impact Zone</b><br>"
+                f"<b>{severity_label} Impact Zone</b><br>"
                 f"Predicted Delay: {predicted_delay:.1f} min<br>"
-                f"Radius: ±{impact_radius:.1f} mi"
+                f"Radius: ±{impact_radius:.2f} mi"
             ),
         ).add_to(m)
 
-        # Start marker
+        # Start Marker
         start_icon_color, start_icon_symbol = direction_info["start"]
         folium.Marker(
-            [start_lat, start_lon],
+            [mp_start_lat, mp_start_lon],
             icon=folium.Icon(color=start_icon_color, icon=start_icon_symbol),
-            tooltip=f"Start ~MP {start_mile:.1f}",
+            tooltip=f"Start ~MP {start_mile:.2f}",
         ).add_to(m)
 
-        # Center marker
+        # Center Marker
         folium.Marker(
             [snap_center_lat, snap_center_lon],
             icon=folium.Icon(color="red", icon="info-sign"),
@@ -202,14 +213,13 @@ def display_unified_map(
             ),
         ).add_to(m)
 
-        # End marker
+        # End Marker
         end_icon_color, end_icon_symbol = direction_info["end"]
         folium.Marker(
-            [end_lat, end_lon],
+            [mp_end_lat, mp_end_lon],
             icon=folium.Icon(color=end_icon_color, icon=end_icon_symbol),
             tooltip=f"End ~MP {end_mile:.1f}",
         ).add_to(m)
-
     # =============================================================
     #                      DRAWING TOOL
     # =============================================================
@@ -242,8 +252,10 @@ def display_unified_map(
                 import shapely.geometry as geom
 
                 # find selected trip geometry
-                trip = next(t for t in all_trips if t["properties"]["TripId"] == selected_trip_id)
-                coords = trip["geometry"]["coordinates"]   # [[lon, lat], [lon, lat], ...]
+                trip = next(
+                    t for t in all_trips if t["properties"]["TripId"] == selected_trip_id)
+                # [[lon, lat], [lon, lat], ...]
+                coords = trip["geometry"]["coordinates"]
 
                 line = geom.LineString(coords)
                 clicked = geom.Point(lon, lat)
@@ -271,6 +283,7 @@ def display_unified_map(
 
             st.caption(
                 f"📍 Snapped to Trip {selected_trip_id} at MP ≈ {approx_mile:.1f} "
+                f"- **Normalized Position:** {norm_pos:.4f} "
                 f"(lat {snap_lat:.6f}, lon {snap_lon:.6f})"
             )
             st.session_state["pending_map_rerun"] = True
