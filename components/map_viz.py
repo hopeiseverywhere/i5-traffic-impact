@@ -41,19 +41,25 @@ def display_unified_map(
     # Detect needed columns
     mile_col, lat_col, lon_col = detect_mile_latlon_columns(mileposts)
 
-    # =============================================================
-    #                   MAP CENTER LOGIC
-    # =============================================================
-    if selected_trip_id is not None and all_trips is not None:
-        # center on midpoint of selected trip
+    # =====================================================
+    # MAP CENTERING:
+    # 1) If prediction exists → center on incident
+    # 2) If no prediction but user clicked → center on snapped point
+    # 3) Otherwise → center on trip midpoint
+    # =====================================================
+    if prediction_result is not None:
+        center_lat = st.session_state.get("snap_lat", 47.60)
+        center_lon = st.session_state.get("snap_lon", -122.33)
+    elif st.session_state.get("snap_lat") is not None:
+        center_lat = st.session_state["snap_lat"]
+        center_lon = st.session_state["snap_lon"]
+    elif selected_trip_id is not None:
         trip = next(t for t in all_trips if t["properties"]["TripId"] == selected_trip_id)
         coords = trip["geometry"]["coordinates"]
         mid = len(coords) // 2
         center_lon, center_lat = coords[mid]
     else:
-        # map starts blank on Seattle region
         center_lat, center_lon = 47.60, -122.33
-        selected_norm = None
 
     # =============================================================
     #                         ZOOM LEVEL

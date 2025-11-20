@@ -36,7 +36,12 @@ if "direction_encoded" not in st.session_state:
     st.session_state["direction_encoded"] = 0
 if "selected_trip_id" not in st.session_state:
     st.session_state["selected_trip_id"] = None
-    
+
+
+# AUTO RERUN WHEN START/END CHANGES
+if st.session_state.get("pending_map_refresh", False):
+    st.session_state["pending_map_refresh"] = False
+    st.rerun()
 # ======================================================
 # HEADER + CSS
 # ======================================================
@@ -97,8 +102,6 @@ if result is not None:
     st.markdown("---")
 
 
-
-
 # ======================================================
 # RESOLVE SELECTED TRIP FEATURE (for map)
 # ======================================================
@@ -119,8 +122,8 @@ display_unified_map(
     selected_norm=st.session_state["selected_norm"],
     prediction_result=st.session_state["prediction_result"],
     direction_encoded=st.session_state["direction_encoded"],
-    all_trips=trip_list,                             
-    selected_trip_id=st.session_state["selected_trip_id"], 
+    all_trips=trip_list,
+    selected_trip_id=st.session_state["selected_trip_id"],
 )
 
 # ======================================================
