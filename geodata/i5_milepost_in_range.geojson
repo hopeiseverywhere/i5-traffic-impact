@@ -244,30 +244,6 @@
     {
       "type": "Feature",
       "properties": {
-        "OBJECTID": 967,
-        "RouteID": "005",
-        "ARM": 141.979996,
-        "SRMP": 142,
-        "Direction": "i",
-        "Longitude": -122.306443650301,
-        "Latitude": 47.289326778145,
-        "StateRouteNumber": "005",
-        "RelRouteType": "",
-        "RelRouteQual": "",
-        "AheadBackInd": "A",
-        "LRS_Date": "20231231"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.30645846463344,
-          47.28933238072208
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
         "OBJECTID": 975,
         "RouteID": "005",
         "ARM": 177.979996,
@@ -1966,30 +1942,6 @@
         "coordinates": [
           -122.31723129427719,
           47.78102451829558
-        ]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "OBJECTID": 1355,
-        "RouteID": "005",
-        "ARM": 141.979996,
-        "SRMP": 142,
-        "Direction": "d",
-        "Longitude": -122.306963946925,
-        "Latitude": 47.289344584306,
-        "StateRouteNumber": "005",
-        "RelRouteType": "",
-        "RelRouteQual": "",
-        "AheadBackInd": "A",
-        "LRS_Date": "20231231"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [
-          -122.30697876134465,
-          47.289350186827605
         ]
       }
     },
