@@ -1,5 +1,5 @@
 import streamlit as st
-from util.sidebar_config import INCIDENT_TYPES, LANE_CLOSURES, DEFAULTS
+from util.sidebar_config import INCIDENT_TYPES, LANE_CLOSURES, DEFAULTS, DAY_OF_WEEK_LABELS 
 from util.data_loader import load_trip_segments, get_trip_by_id
 from util.segments import TRIP_SEGMENTS, SEGMENT_POINTS
 
@@ -18,6 +18,13 @@ for t in TRIP_SEGMENTS:
     START_TO_END.setdefault(s, set()).add(e)
     TRIPS_BY_SEGMENT.setdefault((s, e), []).append(t)
 
+def days_in_month(month):
+    if month == 2:
+        return 29  # allow up to 29 for simplicity
+    elif month in [4, 6, 9, 11]:
+        return 30
+    else:
+        return 31
 
 # ==================================================================
 # Sidebar Component
@@ -139,7 +146,7 @@ def prediction_sidebar(selected_norm, approx_mile):
     # WAIT FOR MAP CLICK
     # ======================================================
     if approx_mile is None:
-        st.sidebar.warning("📍 Click on the map to place the incident.")
+        st.sidebar.warning("Use the place marker 📍 to place the incident.")
         return None, False
 
     st.sidebar.info(
@@ -149,11 +156,25 @@ def prediction_sidebar(selected_norm, approx_mile):
     # MODEL FEATURE INPUTS
     # ======================================================
     hour = st.sidebar.slider("Hour (0–23)", 0, 23, DEFAULTS["hour"])
-    day_of_week = st.sidebar.slider(
-        "Day of Week (0=Mon)", 0, 6, DEFAULTS["day_of_week"])
-    month = st.sidebar.slider("Month", 1, 12, DEFAULTS["month"])
-    day_of_month = st.sidebar.slider(
-        "Day of Month", 1, 31, DEFAULTS["day_of_month"])
+    day_of_week = st.sidebar.selectbox(
+        "Day of Week",
+        options=list(DAY_OF_WEEK_LABELS.keys()),
+        index=DEFAULTS["day_of_week"],
+        format_func=lambda x: f"{x} – {DAY_OF_WEEK_LABELS[x]}"
+    )
+    month = st.sidebar.selectbox(
+        "Month",
+        options=list(range(1, 13)),
+        index=DEFAULTS["month"] - 1,
+    )
+    valid_days = list(range(1, days_in_month(month) + 1))
+
+    day_of_month = st.sidebar.selectbox(
+        "Day of Month",
+        options=valid_days,
+        index=min(DEFAULTS["day_of_month"], len(valid_days)) - 1,
+    )
+
 
     incident_type_encoded = st.sidebar.selectbox(
         "Incident Type",
