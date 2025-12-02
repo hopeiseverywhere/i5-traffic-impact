@@ -88,46 +88,46 @@ def estimate_impact_radius(delay_minutes, blocking, incident_type):
     return min(radius, 10.0)
 
 
-if __name__ == "__main__":
-    # Test prediction
-    test_incident = {
-        'hour': 16,  # 4 PM
-        'day_of_week': 2,  # Wednesday
-        'is_rush_hour': 1,
-        'is_weekend': 0,
-        'location_zone': 5,
-        'milepost_normalized': 0.5,
-        'incident_type_encoded': 3,  # Collision
-        'lane_closure_encoded': 3,   # Two lanes
-        'direction_encoded': 0,
-        'blocking_encoded': 1,
-        'severity_score': 2,
-        'rush_blocking_interaction': 1,
-    }
+# if __name__ == "__main__":
+#     # Test prediction
+#     test_incident = {
+#         'hour': 16,  # 4 PM
+#         'day_of_week': 2,  # Wednesday
+#         'is_rush_hour': 1,
+#         'is_weekend': 0,
+#         'location_zone': 5,
+#         'milepost_normalized': 0.5,
+#         'incident_type_encoded': 3,  # Collision
+#         'lane_closure_encoded': 3,   # Two lanes
+#         'direction_encoded': 0,
+#         'blocking_encoded': 1,
+#         'severity_score': 2,
+#         'rush_blocking_interaction': 1,
+#     }
 
-    test_incident2 = {
-        "hour": 12,
-        "day_of_week": 2,
-        "month": 6,
-        "day_of_month": 15,
-        "milepost_normalized": 0.48,
-        "StartID": 1,
-        "EndID": 2,
-        "useHOV": 0,
-        "incident_type_encoded": 0,
-        "lane_closure_encoded": 0,
-        "blocking_encoded": 0,
-    }
+#     test_incident2 = {
+#         "hour": 12,
+#         "day_of_week": 2,
+#         "month": 6,
+#         "day_of_month": 15,
+#         "milepost_normalized": 0.48,
+#         "StartID": 1,
+#         "EndID": 2,
+#         "useHOV": 0,
+#         "incident_type_encoded": 0,
+#         "lane_closure_encoded": 0,
+#         "blocking_encoded": 0,
+#     }
 
-    result = predict_incident_impact(test_incident2)
+#     result = predict_incident_impact(test_incident2)
 
-    print("\nTest Prediction:")
-    print(
-        f"  Severity Prediction: {result['severity_label']} ({result['severity_prediction']})")
-    print(f"\n  Severity Probabilities:")
-    for label, prob in result['severity_probabilities'].items():
-        print(f"    {label}: {prob:.2%}")
-    print(
-        f"\n  Predicted Delay: {result['predicted_delay_minutes']:.1f} minutes")
-    print(f"  Impact Radius: {result['impact_radius_miles']:.2f} miles")
-    print(f"  Confidence: {result['confidence']}")
+#     print("\nTest Prediction:")
+#     print(
+#         f"  Severity Prediction: {result['severity_label']} ({result['severity_prediction']})")
+#     print(f"\n  Severity Probabilities:")
+#     for label, prob in result['severity_probabilities'].items():
+#         print(f"    {label}: {prob:.2%}")
+#     print(
+#         f"\n  Predicted Delay: {result['predicted_delay_minutes']:.1f} minutes")
+#     print(f"  Impact Radius: {result['impact_radius_miles']:.2f} miles")
+#     print(f"  Confidence: {result['confidence']}")
